@@ -492,16 +492,6 @@ Se você chegou até aqui, o projeto **está sólido e pronto para uso**. O que 
 | **Testes unitários com xUnit** | Quando o `ProdutoService` estabilizar (ele é puro, fácil de testar) |
 | **Migrar para Web API** | Se quiser expor o estoque para outros clientes — o `ProdutoService` se reaproveita inteiro |
 
-### O que **NÃO** fazer (mesmo parecendo profissional)
-
-- **Repository pattern** — `DbContext` já é a abstração. Interface só para testar prepara um problema que você não tem.
-- **Unit of Work** — já é o `DbContext`.
-- **DI container** — você instancia 1 service + 1 context por operação. Container resolve nada.
-- **CQRS / MediatR** — 13 operações de menu. Não há dois lados "read" e "write" complexos.
-- **`async/await` em tudo** — console com SQLite local: latência zero, código mais difícil de ler.
-
-Se algum dia você **migrar para ASP.NET Core** (Web API, por exemplo), aí sim vale reconsiderar DI, async/await e separação em camadas — porque o contexto muda completamente. Enquanto for console, **o código atual está no ponto certo**.
-
 ---
 
 **Bom proveito!** Se algo der errado, os **logs** são seu melhor amigo: `bin/Debug/net8.0/logs/estoque-YYYY-MM-DD.log`.
