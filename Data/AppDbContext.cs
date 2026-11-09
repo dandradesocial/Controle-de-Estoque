@@ -38,8 +38,6 @@ public class AppDbContext : DbContext
             entity.HasKey(m => m.Id);
             entity.Property(m => m.Observacao).HasMaxLength(500);
 
-            // Mantido como "Restrict" por segurança — nenhum código chama Remove()
-            // mais, mas se alguém adicionar no futuro, o banco impede a perda de histórico.
             entity.HasOne(m => m.Produto)
                   .WithMany(p => p.Movimentacoes)
                   .HasForeignKey(m => m.ProdutoId)

@@ -8,38 +8,24 @@ using Serilog;
 
 namespace ControleDeEstoque.Services;
 
-/// <summary>
-/// Concentra as operações de negócio e de acesso a dados dos produtos.
-/// Não é Repository — não tem interface, não tem DI. É apenas organização.
-/// </summary>
 public class ProdutoService
 {
     private readonly AppDbContext _db;
 
-    // pt-BR é a cultura padrão para o CSV: decimal com vírgula, separador ";",
-    // compatível com Excel PT-BR. Definida explicitamente para não depender
-    // da configuração da máquina onde o programa roda.
     private static readonly CultureInfo CulturaCsv = CultureInfo.GetCultureInfo("pt-BR");
 
     public ProdutoService(AppDbContext db) => _db = db;
 
     // ============================ CONSULTAS ============================
 
-    /// <summary>Retorna todos os produtos ativos ordenados por nome.</summary>
     public List<Produto> ListarTodos() =>
         _db.Produtos.AsNoTracking()      // item 1: sem change tracking (só leitura)
             .Where(p => p.Ativo)
             .OrderBy(p => p.Nome)
             .ToList();
 
-    /// <summary>
-    /// Busca um produto pelo Id (inclui desativados). Usa tracking porque
-    /// o retorno é usado em Atualizar/Reativar/Desativar — o EF precisa
-    /// rastrear a entidade para gravar as alterações depois.
-    /// </summary>
     public Produto? BuscarPorId(int id) => _db.Produtos.Find(id);
 
-    /// <summary>Busca produtos ativos cujo nome contenha o termo (case-insensitive).</summary>
     public List<Produto> BuscarPorNome(string termo)
     {
         string padrao = $"%{termo}%";
@@ -49,7 +35,6 @@ public class ProdutoService
             .ToList();
     }
 
-    /// <summary>Produtos ativos com quantidade abaixo do estoque mínimo.</summary>
     public List<Produto> ListarEstoqueBaixo() =>
         _db.Produtos.AsNoTracking()      // item 1
             .Where(p => p.Ativo && p.QuantidadeEstoque < p.EstoqueMinimo)
@@ -65,13 +50,10 @@ public class ProdutoService
 
     // ============================ CRUD ============================
 
-    /// <summary>Insere um novo produto e salva no banco.</summary>
     public void Cadastrar(Produto produto)
     {
         Log.Information("Solicitado cadastro: SKU {Sku}, Nome {Nome}", produto.Sku, produto.Nome);
 
-        // Item 9: validação defensiva. O MenuConsole já valida, mas se algum
-        // outro caller usar o service direto, esta barreira impede dados inválidos.
         var ctx = new ValidationContext(produto);
         Validator.ValidateObject(produto, ctx, validateAllProperties: true);
 
@@ -82,14 +64,10 @@ public class ProdutoService
             produto.Nome, produto.Sku, produto.Id);
     }
 
-    /// <summary>Persiste alterações em um produto existente.</summary>
     public bool Atualizar(Produto produto)
     {
         Log.Information("Solicitado update: Id {Id}, Nome {Nome}", produto.Id, produto.Nome);
 
-        // Item 3: sem Find() extra. Se veio rastreado (caso normal via BuscarPorId),
-        // o EF já detecta as mudanças em SaveChanges. Se por algum motivo veio
-        // detached, anexamos como Modified para garantir o UPDATE.
         var entry = _db.Entry(produto);
         if (entry.State == EntityState.Detached)
             entry.State = EntityState.Modified;
@@ -99,7 +77,6 @@ public class ProdutoService
         return true;
     }
 
-    /// <summary>Desativa um produto (soft delete). Histórico é preservado.</summary>
     public bool Desativar(int id)
     {
         Log.Information("Solicitada desativação: Id {Id}", id);
@@ -113,7 +90,6 @@ public class ProdutoService
         return true;
     }
 
-    /// <summary>Reativa um produto previamente desativado.</summary>
     public bool Reativar(int id)
     {
         Log.Information("Solicitada reativação: Id {Id}", id);
@@ -129,10 +105,6 @@ public class ProdutoService
 
     // ============================ MOVIMENTAÇÕES ============================
 
-    /// <summary>
-    /// Registra uma entrada de estoque e atualiza o saldo do produto
-    /// na mesma transação atômica.
-    /// </summary>
     public bool RegistrarEntrada(int produtoId, int quantidade, string? observacao = null)
     {
         if (quantidade <= 0)
@@ -140,8 +112,6 @@ public class ProdutoService
 
         Log.Information("Solicitada entrada: +{Qtd} un. no produto Id {Id}", quantidade, produtoId);
 
-        // Item 4: verificação antes de abrir transação. Evita gastar
-        // transação com uma validação que pode falhar rápido.
         var produto = _db.Produtos.Find(produtoId);
         if (produto == null || !produto.Ativo) return false;
 
@@ -166,10 +136,6 @@ public class ProdutoService
         return true;
     }
 
-    /// <summary>
-    /// Registra uma saída de estoque e atualiza o saldo. Falha se não
-    /// houver quantidade suficiente.
-    /// </summary>
     public (bool sucesso, string? erro) RegistrarSaida(int produtoId, int quantidade, string? observacao = null)
     {
         if (quantidade <= 0)
@@ -206,7 +172,6 @@ public class ProdutoService
         return (true, null);
     }
 
-    /// <summary>Histórico de movimentações do produto (do mais recente ao mais antigo).</summary>
     public List<MovimentacaoEstoque> ListarMovimentacoes(int produtoId) =>
         _db.Movimentacoes.AsNoTracking()      // item 1
             .Where(m => m.ProdutoId == produtoId)
@@ -233,10 +198,6 @@ public class ProdutoService
 
     // ============================ EXPORTAÇÃO ============================
 
-    /// <summary>
-    /// Exporta os produtos ativos para um CSV em <c>exports/</c>, com
-    /// cultura pt-BR explícita (decimal com vírgula, separador ";").
-    /// </summary>
     public string ExportarCsvAtivos()
     {
         Log.Information("Solicitada exportação CSV");
@@ -247,14 +208,12 @@ public class ProdutoService
 
         string arquivo = Path.Combine(exportsDir, $"produtos-{DateTime.Now:yyyyMMdd-HHmmss}.csv");
 
-        // UTF8Encoding(true) emite BOM — necessário para o Excel reconhecer acentos
         using var sw = new StreamWriter(arquivo, false, new UTF8Encoding(true));
 
         sw.WriteLine("Id;SKU;Nome;Descricao;PrecoCusto;PrecoVenda;Qtd;Minimo;DataCadastro;ValorTotalCusto");
 
         foreach (var p in produtos)
         {
-            // Item 8: cultura explícita, não CurrentCulture
             sw.WriteLine(string.Join(";", new[]
             {
                 p.Id.ToString(),

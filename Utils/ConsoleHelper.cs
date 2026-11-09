@@ -83,10 +83,6 @@ public static class ConsoleHelper
 
     // ---------------------- HELPER DE TELA (item 6) ----------------------
 
-    /// <summary>
-    /// Limpa a tela e imprime o título padrão. Centraliza o padrão
-    /// repetido em todos os métodos do MenuConsole.
-    /// </summary>
     public static void MostrarTela(string titulo)
     {
         AnsiConsole.Clear();

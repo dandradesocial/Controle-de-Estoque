@@ -3,16 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ControleDeEstoque.Models;
 
-/// <summary>
-/// Entidade que representa um produto no estoque.
-/// Produtos nunca são removidos fisicamente — são <b>desativados</b>
-/// (soft delete) para preservar o histórico de movimentações e auditoria.
-/// </summary>
 public class Produto
 {
     public int Id { get; set; }
 
-    /// <summary>Código único de negócio (SKU). Ex.: CAN-001.</summary>
+    /// Código único de negócio (SKU). Ex.: CAN-001.
     [Required(ErrorMessage = "O SKU é obrigatório.")]
     [MaxLength(50, ErrorMessage = "O SKU deve ter no máximo 50 caracteres.")]
     public string Sku { get; set; } = string.Empty;
@@ -40,10 +35,6 @@ public class Produto
 
     public DateTime DataCadastro { get; set; } = DateTime.Now;
 
-    /// <summary>
-    /// Indica se o produto está ativo. Produtos desativados não aparecem
-    /// nas listagens normais, mas continuam no banco (soft delete).
-    /// </summary>
     public bool Ativo { get; set; } = true;
 
     public List<MovimentacaoEstoque> Movimentacoes { get; set; } = new();

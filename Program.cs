@@ -10,8 +10,7 @@ namespace ControleDeEstoque;
 
 class Program
 {
-    // Array declarativo do menu: número + texto + ação. Elimina o
-    // parsing frágil de "int.Parse(escolha.Split(' ')[0])".
+
     private static readonly (int Num, string Texto, Action<MenuConsole> Acao)[] Menu =
     {
         (1,  "Cadastrar produto",                             m => m.CadastrarProduto()),
@@ -35,7 +34,6 @@ class Program
         ConfigureLogger();
         string connectionString = CarregarConnectionString();
 
-        // Item 12: Ctrl+C salva um backup final e encerra com log limpo.
         Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
@@ -106,8 +104,6 @@ class Program
             AnsiConsole.Clear();
             AnsiConsole.Write(new Rule("[yellow]CONTROLE DE ESTOQUE[/]").RuleStyle("grey"));
 
-            // SelectionPrompt genérico no tuple do menu — retorna o item
-            // completo, e o UseConverter só controla a exibição.
             var opcao = AnsiConsole.Prompt(
                 new SelectionPrompt<(int Num, string Texto, Action<MenuConsole> Acao)>()
                     .Title("[bold]Escolha uma opção (↑ ↓ + Enter):[/]")
